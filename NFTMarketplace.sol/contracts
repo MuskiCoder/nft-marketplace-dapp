@@ -1,0 +1,44 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract NFTMarketplace is ERC721, Ownable {
+    uint256 public tokenCounter;
+    uint256 public mintPrice = 0.01 ether;
+
+    struct ListedToken {
+        uint256 tokenId;
+        address seller;
+        uint256 price;
+        bool isListed;
+    }
+
+    mapping(uint256 => ListedToken) public listings;
+
+    constructor() ERC721("MuskiNFT", "MNFT") {
+        tokenCounter = 0;
+    }
+
+    function mintNFT() public payable {
+        require(msg.value >= mintPrice, "Insufficient ETH");
+        tokenCounter++;
+        _safeMint(msg.sender, tokenCounter);
+    }
+
+    function listNFT(uint256 tokenId, uint256 price) public {
+        require(ownerOf(tokenId) == msg.sender, "Not owner");
+        listings[tokenId] = ListedToken(tokenId, msg.sender, price, true);
+    }
+
+    function buyNFT(uint256 tokenId) public payable {
+        ListedToken memory item = listings[tokenId];
+        require(item.isListed, "Not listed");
+        require(msg.value >= item.price, "Price not met");
+
+        payable(item.seller).transfer(item.price);
+        _transfer(item.seller, msg.sender, tokenId);
+        listings[tokenId].isListed = false;
+    }
+}
